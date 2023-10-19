@@ -55,8 +55,8 @@ fn convert_to_fixed_array(bytes: &[u8]) -> [u8; 32] {
 ///
 /// # Returns
 ///
-/// * `String` - Contains either the error that happened during the run or `Success` if everything
-///   went well.
+/// * `String` - Contains either the error that happened during the run or the leaf index if
+///   everything went well.
 #[get("/save?<bytes>&<sig>&<pk>")]
 fn save(bytes: &[u8], sig: &str, pk: &str) -> String {
     // Sig verification
@@ -109,11 +109,13 @@ fn save(bytes: &[u8], sig: &str, pk: &str) -> String {
         // Update the tree.
         *v = new_tree;
     }
-    String::from("Success")
+    // Index of the new leaf.
+    (data_len + 2).to_string()
 }
 
+/// Type to serialize the response of the endpoint.
 #[derive(Serialize)]
-struct Resp {
+struct RootData {
     root: [u8; 32],
     data: Vec<[u8; 32]>,
 }
@@ -130,7 +132,7 @@ struct Resp {
 #[get("/get_root_and_data")]
 fn get_root_and_data() -> String {
     let tree = TREE.read().expect("Failed to read the merkle tree");
-    serde_json::to_string(&Resp {
+    serde_json::to_string(&RootData {
         root: tree.root(),
         data: DATA
             .lock()
@@ -143,7 +145,27 @@ fn get_root_and_data() -> String {
     .unwrap_or(String::from("Failed to stringify the response"))
 }
 
+/// Type to serialize the response of the endpoint.
+#[derive(Serialize)]
+struct Root {
+    root: [u8; 32],
+}
+/// Returns the merkle root of the server's merkle tree.
+///
+/// # Panic
+///
+/// Panics if it fails to read the tree or to serialize the root.
+///
+/// # Returns
+///
+/// * `String` - Json serialization of the merkle root.
+#[get("/get_root")]
+fn get_root() -> String {
+    let root = TREE.read().expect("Failed to read the tree").root();
+    serde_json::to_string(&Root { root }).unwrap_or(String::from("Failed to stringify the response"))
+}
+
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![save, get_root_and_data])
+    rocket::build().mount("/", routes![save, get_root_and_data, get_root])
 }
