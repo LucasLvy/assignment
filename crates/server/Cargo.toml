@@ -1,0 +1,14 @@
+[package]
+name = "server"
+version.workspace = true 
+edition.workspace = true
+
+[dependencies]
+rocket.workspace = true
+ed25519-dalek.workspace = true
+hex.workspace = true
+merkletree.workspace = true
+lazy_static.workspace = true
+sha2.workspace = true
+serde.workspace = true
+serde_json.workspace = true
